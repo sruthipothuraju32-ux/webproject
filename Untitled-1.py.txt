@@ -1,0 +1,120 @@
+# ==========================================
+# FULL UNEMPLOYMENT ANALYSIS PROJECT
+# Self-contained executable script
+# ==========================================
+
+# Install required libraries if not installed:
+# pip install pandas numpy matplotlib seaborn scikit-learn statsmodels
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+from statsmodels.tsa.arima.model import ARIMA
+import warnings
+warnings.filterwarnings("ignore")
+
+print("Starting Unemployment Analysis Project...\n")
+
+# ==========================================
+# 1. GENERATE SAMPLE DATASET
+# ==========================================
+
+np.random.seed(42)
+
+dates = pd.date_range(start="2015-01-01", periods=96, freq="M")
+
+# Simulated unemployment trend with COVID spike
+trend = np.linspace(6, 5, 96)
+seasonality = 0.3 * np.sin(np.linspace(0, 12, 96))
+covid_spike = np.zeros(96)
+covid_spike[60:66] = 3  # Spike during pandemic period
+
+noise = np.random.normal(0, 0.2, 96)
+
+unemployment_rate = trend + seasonality + covid_spike + noise
+
+df = pd.DataFrame({
+    "Date": dates,
+    "Unemployment_Rate": unemployment_rate
+})
+
+df["Date"] = pd.to_datetime(df["Date"])
+df = df.sort_values("Date")
+
+print("Dataset Created Successfully!\n")
+print(df.head())
+
+# ==========================================
+# 2. EXPLORATORY DATA ANALYSIS
+# ==========================================
+
+print("\nStatistical Summary:\n")
+print(df.describe())
+
+plt.figure(figsize=(12,6))
+plt.plot(df["Date"], df["Unemployment_Rate"], color="blue")
+plt.title("Unemployment Rate Over Time")
+plt.xlabel("Date")
+plt.ylabel("Unemployment Rate (%)")
+plt.grid(True)
+plt.show()
+
+# Correlation Matrix
+plt.figure(figsize=(6,4))
+sns.heatmap(df.corr(numeric_only=True), annot=True, cmap="coolwarm")
+plt.title("Correlation Matrix")
+plt.show()
+
+# ==========================================
+# 3. LINEAR REGRESSION MODEL
+# ==========================================
+
+df["Time_Index"] = np.arange(len(df))
+
+X = df[["Time_Index"]]
+y = df["Unemployment_Rate"]
+
+model = LinearRegression()
+model.fit(X, y)
+
+df["Predicted_LR"] = model.predict(X)
+
+mse = mean_squared_error(y, df["Predicted_LR"])
+r2 = r2_score(y, df["Predicted_LR"])
+
+print("\nLinear Regression Results:")
+print("MSE:", round(mse, 4))
+print("R2 Score:", round(r2, 4))
+
+plt.figure(figsize=(12,6))
+plt.plot(df["Date"], y, label="Actual")
+plt.plot(df["Date"], df["Predicted_LR"], linestyle="--", label="Linear Regression Prediction")
+plt.legend()
+plt.title("Linear Regression Fit")
+plt.show()
+
+# ==========================================
+# 4. ARIMA TIME SERIES FORECAST
+# ==========================================
+
+series = df.set_index("Date")["Unemployment_Rate"]
+
+model_arima = ARIMA(series, order=(2,1,2))
+model_arima_fit = model_arima.fit()
+
+forecast = model_arima_fit.forecast(steps=12)
+
+plt.figure(figsize=(12,6))
+plt.plot(series, label="Actual Data")
+plt.plot(forecast.index, forecast, color="red", label="12-Month Forecast")
+plt.legend()
+plt.title("ARIMA Forecast")
+plt.show()
+
+print("\nNext 12 Months Forecast:")
+print(forecast)
+
+print("\nProject Completed Successfully!")
