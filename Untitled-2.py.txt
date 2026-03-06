@@ -1,0 +1,117 @@
+# ================================
+# EMAIL SPAM DETECTION IN PYTHON
+# Fully Executable
+# ================================
+
+# Install libraries if not installed:
+# pip install pandas scikit-learn matplotlib seaborn
+
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.filterwarnings("ignore")
+
+print("Starting Email Spam Detection Project...\n")
+
+# ================================
+# 1. CREATE SAMPLE EMAIL DATASET
+# ================================
+
+spam_emails = [
+    "Congratulations! You won a lottery",
+    "Earn money fast from home",
+    "Get free cash prize now",
+    "Limited time offer, buy now",
+    "Claim your reward immediately",
+]
+
+ham_emails = [
+    "Meeting scheduled at 10 AM",
+    "Project deadline is tomorrow",
+    "Let's have lunch today",
+    "Your order has been shipped",
+    "Reminder: Submit your assignment",
+]
+
+# Generate dataset
+emails = []
+labels = []
+
+for _ in range(100):
+    emails.append(np.random.choice(spam_emails))
+    labels.append(1)  # spam
+
+for _ in range(100):
+    emails.append(np.random.choice(ham_emails))
+    labels.append(0)  # ham
+
+df = pd.DataFrame({"Email_Text": emails, "Label": labels})
+
+# Shuffle dataset
+df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+print("Dataset Preview:\n", df.head())
+
+# ================================
+# 2. SPLIT DATA
+# ================================
+
+X = df["Email_Text"]
+y = df["Label"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# ================================
+# 3. TEXT VECTORIZATION (TF-IDF)
+# ================================
+
+vectorizer = TfidfVectorizer(stop_words="english")
+X_train_tfidf = vectorizer.fit_transform(X_train)
+X_test_tfidf = vectorizer.transform(X_test)
+
+# ================================
+# 4. TRAIN NAIVE BAYES MODEL
+# ================================
+
+nb_model = MultinomialNB()
+nb_model.fit(X_train_tfidf, y_train)
+
+y_pred = nb_model.predict(X_test_tfidf)
+
+# ================================
+# 5. EVALUATION
+# ================================
+
+print("\nModel Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+# Confusion Matrix
+plt.figure(figsize=(5,4))
+sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix - Naive Bayes")
+plt.show()
+
+# ================================
+# 6. PREDICT NEW EMAIL
+# ================================
+
+new_email = ["Congratulations! You have won free cash prize"]
+
+new_email_tfidf = vectorizer.transform(new_email)
+prediction = nb_model.predict(new_email_tfidf)
+
+if prediction[0] == 1:
+    print("\nThe new email is predicted as: SPAM")
+else:
+    print("\nThe new email is predicted as: HAM (Not Spam)")
+
+print("\nProject Completed Successfully!")
